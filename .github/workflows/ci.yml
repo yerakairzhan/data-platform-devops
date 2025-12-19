@@ -1,0 +1,59 @@
+name: Data Platform CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---------- Python sanity checks ----------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install basic tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Lint Python services
+        run: |
+          flake8 stream-processor || true
+          flake8 batch-processor || true
+          flake8 analytics-dashboard || true
+
+      # ---------- Docker build ----------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build stream-processor image
+        run: |
+          docker build -t stream-processor:ci ./stream-processor
+
+      - name: Build batch-processor image
+        run: |
+          docker build -t batch-processor:ci ./batch-processor
+
+      - name: Build analytics-dashboard image
+        run: |
+          docker build -t analytics-dashboard:ci ./analytics-dashboard
+
+      # ---------- Kubernetes manifest validation ----------
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.29.0"
+
+
+      - name: Validate Kubernetes manifests
+        run: |
+          kubectl apply --dry-run=client -f k8s/
