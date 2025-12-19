@@ -1,0 +1,64 @@
+stages:
+  - lint
+  - build
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+.default-docker:
+  image: docker:25
+  services:
+    - docker:25-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+# ------------------------
+# LINT (basic validation)
+# ------------------------
+
+lint-stream-processor:
+  stage: lint
+  image: python:3.11-slim
+  script:
+    - pip install --no-cache-dir flake8
+    - flake8 stream-processor || true
+
+lint-batch-processor:
+  stage: lint
+  image: python:3.11-slim
+  script:
+    - pip install --no-cache-dir flake8
+    - flake8 batch-processor || true
+
+lint-dashboard:
+  stage: lint
+  image: python:3.11-slim
+  script:
+    - pip install --no-cache-dir flake8
+    - flake8 analytics-dashboard || true
+
+# ------------------------
+# BUILD IMAGES
+# ------------------------
+
+build-stream-processor:
+  stage: build
+  extends: .default-docker
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/stream-processor:$CI_COMMIT_SHORT_SHA" stream-processor
+    - docker push "$CI_REGISTRY_IMAGE/stream-processor:$CI_COMMIT_SHORT_SHA"
+
+build-batch-processor:
+  stage: build
+  extends: .default-docker
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/batch-processor:$CI_COMMIT_SHORT_SHA" batch-processor
+    - docker push "$CI_REGISTRY_IMAGE/batch-processor:$CI_COMMIT_SHORT_SHA"
+
+build-analytics-dashboard:
+  stage: build
+  extends: .default-docker
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/analytics-dashboard:$CI_COMMIT_SHORT_SHA" analytics-dashboard
+    - docker push "$CI_REGISTRY_IMAGE/analytics-dashboard:$CI_COMMIT_SHORT_SHA"

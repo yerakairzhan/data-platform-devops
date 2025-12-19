@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow
+  namespace: data-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+  template:
+    metadata:
+      labels:
+        app: airflow
+    spec:
+      containers:
+        - name: airflow
+          image: apache/airflow:2.8.1
+          env:
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: SequentialExecutor
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              value: sqlite:////opt/airflow/airflow.db
+          ports:
+            - containerPort: 8070
+          command:
+            - bash
+            - -c
+            - |
+              airflow db init &&
+              airflow users create \
+                --username admin \
+                --password admin \
+                --firstname admin \
+                --lastname admin \
+                --role Admin \
+                --email admin@example.com &&
+              airflow webserver

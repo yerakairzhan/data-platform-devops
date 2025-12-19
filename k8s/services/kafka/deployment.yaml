@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: data-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: redpanda
+          image: redpandadata/redpanda:v23.2.12
+          args:
+            - redpanda
+            - start
+            - --smp
+            - "1"
+            - --memory
+            - "512M"
+            - --overprovisioned
+            - --node-id
+            - "0"
+            - --check=false
+          ports:
+            - containerPort: 9092
